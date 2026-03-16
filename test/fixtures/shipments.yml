@@ -1,0 +1,29 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  skydropx_id: MyString
+  rate_id: MyString
+  carrier: MyString
+  service_id: MyString
+  tracking_number: MyString
+  tracking_status: MyString
+  tracking_url: MyString
+  label_url: MyString
+  workflow_status: MyString
+  payment_status: MyString
+  total: 9.99
+  metadata: 
+
+two:
+  skydropx_id: MyString
+  rate_id: MyString
+  carrier: MyString
+  service_id: MyString
+  tracking_number: MyString
+  tracking_status: MyString
+  tracking_url: MyString
+  label_url: MyString
+  workflow_status: MyString
+  payment_status: MyString
+  total: 9.99
+  metadata: 

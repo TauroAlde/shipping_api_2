@@ -3,31 +3,24 @@ class QuotationsController < ApplicationController
     service = SkydropxService.new
     res = service.create_quotation(quotation_params)
 
-    if res[:error]
+    # si hubo error en el servicio
+    if res.is_a?(Hash) && res[:error]
       render json: { error: res[:error] }, status: :unprocessable_entity
       return
     end
 
-    quotation_id = res[:id]
-    final = service.get_final_quotation(quotation_id)
+    quotation_id = res.data[:id]
+    quotation = service.get_quotation(quotation_id)
 
-    if final[:error]
-      render json: { error: final[:error] }, status: :unprocessable_entity
+    if quotation.is_a?(Hash) && quotation[:error]
+      render json: { error: quotation[:error] }, status: :unprocessable_entity
     else
-      render json: final # aquí están los rates, carriers, etc.
+      puts quotation.successful_rates
+      render json: quotation.successful_rates
     end
   end
 
   private
-
-  def quotation_params
-    params.require(:quotation).permit(
-      address_from: [:country_code, :postal_code, :area_level1, :area_level2, :area_level3],
-      address_to: [:country_code, :postal_code, :area_level1, :area_level2, :area_level3],
-      parcels: [:length, :width, :height, :weight, :package_protected, :declared_value, :declared_amount],
-      requested_carriers: []
-    )
-  end
 
   def quotation_params
     params.require(:quotation).permit(

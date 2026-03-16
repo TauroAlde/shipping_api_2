@@ -12,7 +12,7 @@ class SkydropxService
   def create_quotation(quotation)
     payload = quotation.respond_to?(:to_h) ? quotation.to_h : quotation
 
-    response = post("/quotations", payload)
+    response = post("/quotations", { quotation: payload })
     return response if response[:error]
 
     QuotationResult.new(response)
@@ -23,6 +23,20 @@ class SkydropxService
     return response if response[:error]
 
     QuotationResult.new(response)
+  end
+
+  def create_shipment(data)
+    response = post("/shipments", { shipment: data })
+    return response if response[:error]
+
+    ShipmentResult.new(response)
+  end
+
+  def get_shipment(shipment_id)
+    response = get("/shipments/#{shipment_id}")
+    return response if response[:error]
+
+    ShipmentResult.new(response)
   end
 
   private
@@ -55,7 +69,7 @@ binding.pry
 
   def parse_response(response)
     case response.code.to_i
-    when 200, 201
+    when 200, 201,202
       JSON.parse(response.body, symbolize_names: true)
     else
       { error: "Skydropx API returned #{response.code}" }
