@@ -26,6 +26,8 @@ class SkydropxService
   end
 
   def create_shipment(data)
+    return { error: "rate_id missing" } unless data[:rate_id]
+
     response = post("/shipments", { shipment: data })
     return response if response[:error]
 
@@ -62,17 +64,23 @@ class SkydropxService
     request["Authorization"] = "Bearer #{@token}"
     request["Content-Type"] = "application/json"
     request.body = body.to_json if body
-binding.pry
+
     response = http.request(request)
     parse_response(response)
   end
 
   def parse_response(response)
     case response.code.to_i
-    when 200, 201,202
+    when 200, 201
       JSON.parse(response.body, symbolize_names: true)
     else
-      { error: "Skydropx API returned #{response.code}" }
+      body = JSON.parse(response.body) rescue {}
+
+      {
+        error: "Skydropx API error",
+        status: response.code,
+        details: body
+      }
     end
   end
 end

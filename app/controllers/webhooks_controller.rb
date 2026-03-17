@@ -1,7 +1,14 @@
-def skydropx
-  payload = JSON.parse(request.body.read, symbolize_names: true)
+class WebhooksController < ApplicationController
+  skip_before_action :verify_authenticity_token
 
-  ProcessSkydropxWebhookJob.perform_later(payload)
+  def skydropx
+    payload = JSON.parse(request.body.read, symbolize_names: true)
 
-  head :ok
+    ProcessSkydropxWebhookJob.perform_later(payload)
+
+    head :ok
+  rescue JSON::ParserError => e
+    Rails.logger.error("Invalid webhook payload: #{e.message}")
+    head :bad_request
+  end
 end

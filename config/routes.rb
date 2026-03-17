@@ -1,5 +1,17 @@
 Rails.application.routes.draw do
-  post "/quotations", to: "quotations#create"
-  post "/shipments", to: "shipments#create"
+  resources :quotations, only: [:create]
+
+  resources :shipments, only: [:create, :index, :show]
+
   post "/webhooks/skydropx", to: "webhooks#skydropx"
+
+  resources :shipments, only: [:create, :index, :show] do
+    member do
+      get :label
+    end
+  end
+
+  member do
+    get :tracking
+  end
 end

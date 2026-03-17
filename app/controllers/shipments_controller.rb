@@ -1,15 +1,32 @@
 class ShipmentsController < ApplicationController
   def create
+    unless shipment_params[:rate_id]
+      render json: { error: "rate_id is required" }, status: :unprocessable_entity
+      return
+    end
+    
     service = SkydropxService.new
 
-    shipment = service.create_shipment(shipment_params)
+    result = service.create_shipment(shipment_params)
 
-    if shipment.is_a?(Hash) && shipment[:error]
-      render json: shipment, status: :unprocessable_entity
+    if result.is_a?(Hash) && result[:error]
+      render json: result, status: :unprocessable_entity
       return
     end
 
-    render json: shipment.data
+    data = result.data[:attributes]
+
+    shipment = Shipment.create!(
+      skydropx_id: data[:id],
+      carrier: data[:carrier_name],
+      workflow_status: data[:workflow_status],
+      payment_status: data[:payment_status],
+      total: data[:total],
+      tracking_number: data[:master_tracking_number],
+      metadata: result.data
+    )
+
+    render json: shipment
   end
 
   def show
@@ -23,6 +40,31 @@ class ShipmentsController < ApplicationController
     end
 
     render json: shipment.data
+  end
+
+  def index
+    render json: Shipment.all
+  end
+
+  def show
+    shipment = Shipment.find(params[:id])
+    render json: shipment
+  end
+
+  def label
+    shipment = Shipment.find(params[:id])
+
+    redirect_to shipment.label_url
+  end
+
+  def tracking
+    shipment = Shipment.find(params[:id])
+
+    render json: {
+      carrier: shipment.carrier,
+      tracking_number: shipment.tracking_number,
+      status: shipment.tracking_status
+    }
   end
 
   private
