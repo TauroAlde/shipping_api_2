@@ -9,9 +9,9 @@ Rails.application.routes.draw do
     member do
       get :label
     end
-  end
 
-  member do
-    get :tracking
+    member do
+      get :tracking
+    end
   end
 end
