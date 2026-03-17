@@ -14,4 +14,6 @@ Rails.application.routes.draw do
       get :tracking
     end
   end
+
+  resource :session, only: [:create, :destroy]
 end
