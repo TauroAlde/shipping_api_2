@@ -1,40 +1,63 @@
 class RankingService
-  def initialize(quotation_results)
-    @results = quotation_results
+  WEIGHTS = {
+    price: 0.5,
+    time: 0.3,
+    reliability: 0.2
+  }.freeze
+
+  def initialize(results)
+    @results = results
   end
 
   def call
-    @results.map do |result|
-      score = calculate_score(result)
+    stats = preload_stats
 
-      {
-        carrier: result.carrier,
-        price: result.price,
-        days: result.days,
-        score: score
-      }
-    end.sort_by { |r| r[:score] }
+    ranked = ActiveRecord::Base.transaction do
+      @results.map do |result|
+        stat = stats[result.carrier]
+
+        reliability = carrier_reliability(stat)
+        score = calculate_score(result, reliability)
+
+        result.update!(score: score, reliability: reliability)
+
+        build_response(result, score, reliability)
+      end
+    end
+
+    ranked.sort_by { |r| r[:score] }
   end
 
   private
 
-  def calculate_score(result)
-    price_weight = 0.5
-    time_weight  = 0.3
-    reliability_weight = 0.2
-
-    reliability = carrier_reliability(result.carrier)
-
-    (result.price * price_weight) +
-    (result.days * time_weight) +
-    ((1 - reliability) * 100 * reliability_weight)
+  def preload_stats
+    ShipmentStat
+      .where(carrier: @results.map(&:carrier))
+      .index_by(&:carrier)
   end
 
-  def carrier_reliability(carrier)
-    stat = ShipmentStat.find_by(carrier: carrier)
+  def calculate_score(result, reliability)
+    (result.price.to_f * WEIGHTS[:price]) +
+    (result.days.to_f * WEIGHTS[:time]) +
+    ((1 - reliability) * 100 * WEIGHTS[:reliability])
+  end
 
-    return 0.9 unless stat # default
+  def carrier_reliability(stat)
+    return 0.9 unless stat
 
-    stat.success_rate
+    total = stat.deliveries.to_i + stat.failures.to_i
+    return 0.9 if total.zero?
+
+    stat.deliveries.to_f / total
+  end
+
+  def build_response(result, score, reliability)
+    {
+      carrier: result.carrier,
+      price: result.price,
+      days: result.days,
+      score: score.round(2),
+      reliability: reliability.round(2)
+    }
   end
 end

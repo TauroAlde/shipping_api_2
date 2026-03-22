@@ -2,25 +2,58 @@ class WebhooksController < ApplicationController
   skip_before_action :authorize_request
 
   def skydropx
+    request_id = request.request_id
     raw_body = request.raw_post
 
+    LoggerService.log(
+      event: "webhook_received",
+      data: { request_id: request_id }
+    )
+
     unless valid_signature?(raw_body)
-      Rails.logger.warn("Invalid Skydropx webhook signature")
+      LoggerService.error(
+        event: "webhook_invalid_signature",
+        error: "Invalid signature",
+        data: { request_id: request_id }
+      )
       return head :unauthorized
     end
 
     payload = JSON.parse(raw_body, symbolize_names: true)
+
+    LoggerService.log(
+      event: "webhook_payload_parsed",
+      data: {
+        request_id: request_id,
+        tracking: payload.dig(:data, :attributes, :tracking_number),
+        status: payload.dig(:data, :attributes, :tracking_status)
+      }
+    )
 
     ProcessSkydropxWebhookJob.perform_later(payload)
 
     head :ok
 
   rescue JSON::ParserError => e
-    Rails.logger.error("Invalid webhook payload: #{e.message}")
+    LoggerService.error(
+      event: "webhook_invalid_json",
+      error: e.message,
+      data: {
+        request_id: request_id,
+        raw_body: raw_body&.slice(0, 500)
+      }
+    )
     head :bad_request
 
   rescue => e
-    Rails.logger.error("Webhook error: #{e.message}")
+    LoggerService.error(
+      event: "webhook_failed",
+      error: e.message,
+      data: {
+        request_id: request_id,
+        backtrace: e.backtrace&.first(5)
+      }
+    )
     head :internal_server_error
   end
 
