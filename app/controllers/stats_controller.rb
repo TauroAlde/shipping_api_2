@@ -1,4 +1,6 @@
 class StatsController < ApplicationController
+  skip_before_action :authorize_request
+  
   def carriers
     stats = ShipmentStat.all
 
