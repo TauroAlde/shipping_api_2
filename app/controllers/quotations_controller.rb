@@ -7,8 +7,10 @@ class QuotationsController < ApplicationController
       return render json: { error: res[:error] }, status: :unprocessable_entity
     end
 
-    quotation_id = res.data[:id]
+    quotation_id = res.data[:id] || res.data["id"]
     raw = service.get_quotation(quotation_id)
+
+    return render json: { error: "Invalid quotation response" }, status: :unprocessable_entity unless quotation_id
 
     if raw.is_a?(Hash) && raw[:error]
       return render json: { error: raw[:error] }, status: :unprocessable_entity
