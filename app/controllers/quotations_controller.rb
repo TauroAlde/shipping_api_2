@@ -3,21 +3,43 @@ class QuotationsController < ApplicationController
     service = SkydropxService.new
     res = service.create_quotation(quotation_params)
 
-    # si hubo error en el servicio
     if res.is_a?(Hash) && res[:error]
-      render json: { error: res[:error] }, status: :unprocessable_entity
-      return
+      return render json: { error: res[:error] }, status: :unprocessable_entity
     end
 
     quotation_id = res.data[:id]
-    quotation = service.get_quotation(quotation_id)
+    raw = service.get_quotation(quotation_id)
 
-    if quotation.is_a?(Hash) && quotation[:error]
-      render json: { error: quotation[:error] }, status: :unprocessable_entity
-    else
-      puts quotation.successful_rates
-      render json: quotation.successful_rates
+    if raw.is_a?(Hash) && raw[:error]
+      return render json: { error: raw[:error] }, status: :unprocessable_entity
     end
+
+    # 💣 1. Parsear (POO)
+    parsed = SkydropxQuotationResult.new(raw.data)
+
+    # 💾 2. Persistir
+    quotation = Quotation.create!
+
+    results = parsed.formatted_rates.map do |rate|
+      QuotationResult.create!(
+        quotation: quotation,
+        carrier: rate[:carrier],
+        service: rate[:service],
+        price: rate[:price],
+        days: rate[:days],
+        currency: rate[:currency],
+        raw_response: rate[:raw]
+      )
+    end
+
+    # 🧠 3. Ranking
+    ranked = RankingService.new(results).call
+
+    # 🚀 4. Respuesta PRO
+    render json: {
+      recommended: ranked.first,
+      options: ranked
+    }
   end
 
   private

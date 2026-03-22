@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  carrier: MyString
+  deliveries: 1
+  failures: 1
+  avg_days: 1.5
+
+two:
+  carrier: MyString
+  deliveries: 1
+  failures: 1
+  avg_days: 1.5
